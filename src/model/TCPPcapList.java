@@ -17,7 +17,7 @@ public class TCPPcapList extends BaseAnalysisPcap implements ActionListener {
     public TCPPcapList(File file, Frame frame, JTextField pcapFilePath) {
         super(file, frame, pcapFilePath);
     }
-
+    String showFileName;
     @Override
     public void analysis() {
         file = new File(pcapFilePath.getText());
@@ -37,8 +37,8 @@ public class TCPPcapList extends BaseAnalysisPcap implements ActionListener {
                 e.printStackTrace();
             }
         }
+        String lastFilename = null;
         while (currentIndex + 30 < allContent.length) {
-            String lastFilename = null;
             final int addIndex = 50;
             byte[] data = getTCPPcap();
             if (data == null) {
@@ -57,13 +57,13 @@ public class TCPPcapList extends BaseAnalysisPcap implements ActionListener {
                 fileName.append(".pcap");
 
                 //出现异常未关闭raf。
-                if (lastFilename == null || !fileName.equals(lastFilename)) {
+                if (lastFilename == null || !compare(fileName.toString(),lastFilename)) {
                     try {
                         Path oneTCPPcap = Paths.get(tcpPackage.toString(), fileName.toString());
                         if(!Files.exists(oneTCPPcap)){
                             Files.createFile(oneTCPPcap);
+                            showFileName = oneTCPPcap.toString();
                         }
-//                        Path oneTCPPcap = Files.createFile(tcpPcap);
                         RandomAccessFile raf = new RandomAccessFile(oneTCPPcap.toFile(), "rw");
                         raf.write(pcapHeader);
                         raf.write(data);
@@ -77,9 +77,10 @@ public class TCPPcapList extends BaseAnalysisPcap implements ActionListener {
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }
-                } else if (fileName.equals(lastFilename)) {
+                } else {
                     try {
-                        RandomAccessFile raf = new RandomAccessFile(file.getParent() + fileName.toString(), "rw");
+                        RandomAccessFile raf = new RandomAccessFile(showFileName,"rw");
+                        raf.seek(raf.length());
                         raf.write(data);
                         lastFilename = fileName.toString();
                         raf.close();
@@ -88,9 +89,24 @@ public class TCPPcapList extends BaseAnalysisPcap implements ActionListener {
                     }
                 }
             }
-
-
         }
+    }
+
+    //第二个参数为上次的文件名
+    private boolean compare(String first,String second){
+        if(first.equals(second)){
+            return true;
+        }
+        StringBuffer temp = new StringBuffer(64);
+        temp.append("TCP");
+        temp.append("[" + destination + destnationPort + "]");
+        temp.append("[" + source + sourcePort + "]");
+        temp.append(".pcap");
+        if(temp.toString().equals(second))
+        {
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -98,21 +114,6 @@ public class TCPPcapList extends BaseAnalysisPcap implements ActionListener {
         file = new File(pcapFilePath.getText());
         //创建目录
         if (getAllContent()) {
-//            Path tcpLoadDir = Paths.get(file.getParent(), "tcpLoad");
-//            Path tcpLoadFile = Paths.get(file.getPath(), "tcpLoad", file.getName());
-//            if (!Files.exists(tcpLoadDir)) {
-//                try {
-//                    Files.createDirectory(tcpLoadDir);
-//                } catch (IOException ex) {
-//                    ex.printStackTrace();
-//                }
-//            }
-//            try {
-//                Files.deleteIfExists(tcpLoadFile);
-//                Files.createFile(tcpLoadFile);
-//            } catch (IOException e1) {
-//                e1.printStackTrace();
-//            }
             analysis();
         }
         JOptionPane.showMessageDialog(frame,"Pcap文件已提取在原文件目录下");
