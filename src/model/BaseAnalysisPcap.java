@@ -27,7 +27,7 @@ abstract public class BaseAnalysisPcap {
     protected StringBuffer destination = new StringBuffer(16);
     protected int sourcePort;
     protected int destnationPort;
-
+    protected byte[] pcapHeader = new byte[24];
     protected Protocol protocol;
     Frame frame;
     JTextField pcapFilePath;
@@ -37,9 +37,16 @@ abstract public class BaseAnalysisPcap {
         this.pcapFilePath = pcapFilePath;
     }
 
+    private void getPcapHeader(){
+        for(int i = 0;i<24;i++){
+            pcapHeader[i] = allContent[i];
+        }
+    }
+
     public abstract void analysis();
 
     protected boolean getAllContent() {
+
         if (file == null) {
             JOptionPane.showMessageDialog(frame, "请选择文件");
             return false;
@@ -50,12 +57,33 @@ abstract public class BaseAnalysisPcap {
             allContent = new byte[(int) file.length()];
             try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
                 raf.read(allContent);
+                getPcapHeader();
                 return true;
             } catch (IOException ex) {
                 ex.printStackTrace();
                 return true;
             }
         }
+    }
+
+    public byte[] getTCPPcap(){
+        nextFirstIndex = currentIndex;
+        if(allContent.length > currentIndex + 30){
+            skipPackageHeader();
+            skipEthernetHeader();
+            currentIndex += 2;
+            getTotalLength();
+            getProtocol();
+            getSource();
+            getDestination();
+            data = new byte[packageLen + 16];
+            currentIndex = nextFirstIndex;
+            for(int i = 0;i<data.length;i++){
+                data[i] = allContent[currentIndex++];
+            }
+            return data;
+        }
+        return null;
     }
 
     public byte[] getNextData() {
@@ -69,6 +97,7 @@ abstract public class BaseAnalysisPcap {
                 currentIndex = nextFirstIndex+packageLen+16;
                 return null;
             }
+            getProtocol();
             getSource();
             getDestination();
             data = new byte[nextLenth];
@@ -84,7 +113,7 @@ abstract public class BaseAnalysisPcap {
 
     private void getSource(){
         source.delete(0,source.length());
-        currentIndex += 8;
+        currentIndex += 2;
         for(int i=0;i<4;i++) {
             source.append(byteToInt(allContent[currentIndex]));
             if(i == 3) {

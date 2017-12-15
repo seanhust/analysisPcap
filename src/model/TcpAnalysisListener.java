@@ -14,7 +14,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class TcpAnalysisListener extends BaseAnalysisPcap implements ActionListener {
-    byte[] oneDatagram = new byte[1500];
+
+    Path tcpLoad;
 
     @Override
     public void analysis() {
@@ -23,11 +24,12 @@ public class TcpAnalysisListener extends BaseAnalysisPcap implements ActionListe
             return;
         }
         byte[] load = new byte[data.length-19];
-
         int i = 0;
         if (protocol == Protocol.TCP) {
-            sourcePort = byteToInt(data[i++]) * 256 + byteToInt(data[i++]);
-            destnationPort = byteToInt(data[i++]) * 256 + byteToInt(data[i++]);
+            sourcePort = byteToInt(data[i++]) * 256;
+            sourcePort += byteToInt(data[i++]);
+            destnationPort = byteToInt(data[i++]) * 256;
+            destnationPort+= byteToInt(data[i++]);
             i += 8;
             headerLength = byteToInt(data[i++])/4;
             if(nextLenth - headerLength <= 20){
@@ -36,23 +38,23 @@ public class TcpAnalysisListener extends BaseAnalysisPcap implements ActionListe
             i = i+7;
             fileName.delete(0,fileName.length());
             fileName.append("TCP");
-            fileName.append("["+source+"]");
-            fileName.append(sourcePort);
-            fileName.append("["+destination+"]");
-            fileName.append(destnationPort);
+            fileName.append("["+source+sourcePort+"]");
+            fileName.append("["+destination+destnationPort+"]");
+            fileName.append(".txt");
             for(int j = 0;i<data.length;i++,j++){
                 load[j] = data[i];
             }
             try {
-                Path tcpFile = Files.createFile(Paths.get(System.getProperty("user.dir"),"tcpPackage",fileName.toString()));
+                Path tcpFile = Paths.get(tcpLoad.toFile().toString(),fileName.toString());
+                if(!Files.exists(tcpFile)){
+                    Files.createFile(tcpFile);
+                }
                 RandomAccessFile raf = new RandomAccessFile(tcpFile.toFile(),"rw");
                 raf.write(load);
                 raf.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            //开始存数据
         } else if (protocol == Protocol.UDP) {
 
         } else {
@@ -68,19 +70,21 @@ public class TcpAnalysisListener extends BaseAnalysisPcap implements ActionListe
     @Override
     public void actionPerformed(ActionEvent e) {
         file = new File(pcapFilePath.getText());
-        //创建目录
-        if (getAllContent()) {
-
-            Path tcpDir = Paths.get(System.getProperty("user.dir"),"tcpPackage");
+        Path temp = Paths.get(file.getParent());
+        tcpLoad = Paths.get(temp.toFile().getParent());
+        if(!Files.exists(tcpLoad)){
             try {
-                Files.deleteIfExists(tcpDir);
-                Files.createDirectory(tcpDir);
+                Files.createDirectory(tcpLoad);
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
+        }
+        //创建目录
+        if (getAllContent()) {
             while(currentIndex + 30 < allContent.length){
                 analysis();
             }
+            JOptionPane.showMessageDialog(frame,"负载已提取完成");
         }
     }
 }

@@ -1,5 +1,6 @@
 package view;
 
+import model.TCPPcapList;
 import model.TcpAnalysisListener;
 
 import javax.swing.*;
@@ -106,7 +107,10 @@ public class View {
             }
         });
         TcpAnalysisListener tcpListener = new TcpAnalysisListener(file,frame,pcapFilePath);
-        pickUpTcp.addActionListener(tcpListener);
+        tcpLoad.addActionListener(tcpListener);
+
+        TCPPcapList tcpPcapList = new TCPPcapList(file,frame,pcapFilePath);
+        pickUpTcp.addActionListener(tcpPcapList);
     }
 
     public static void main(String[] args){
