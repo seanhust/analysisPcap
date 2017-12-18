@@ -17,12 +17,14 @@ public class TCPPcapList extends BaseAnalysisPcap implements ActionListener {
     public TCPPcapList(File file, Frame frame, JTextField pcapFilePath) {
         super(file, frame, pcapFilePath);
     }
+    //用于将多个pcap命一个名字
     String showFileName;
     @Override
     public void analysis() {
+        //通过使用文件名区分不同的pcap
         file = new File(pcapFilePath.getText());
-        Path tcpList = Paths.get(file.getParent(),"tcpList.txt");
-        Path tcpPackage = Paths.get(file.getParent(),"tcpPackage");
+        Path tcpList = Paths.get(file.getParent(),file.getName().substring(0,file.getName().length()-5)+"tcpList.txt");
+        Path tcpPackage = Paths.get(file.getParent(),file.getName().substring(0,file.getName().length()-5)+"tcpPackage");
         if(!Files.exists(tcpPackage)){
             try {
                 Files.createDirectory(tcpPackage);
@@ -58,22 +60,27 @@ public class TCPPcapList extends BaseAnalysisPcap implements ActionListener {
 
                 //出现异常未关闭raf。
                 if (lastFilename == null || !compare(fileName.toString(),lastFilename)) {
+                    //标志是否有新建了文件
+                    boolean tag = false;
                     try {
                         Path oneTCPPcap = Paths.get(tcpPackage.toString(), fileName.toString());
                         if(!Files.exists(oneTCPPcap)){
                             Files.createFile(oneTCPPcap);
                             showFileName = oneTCPPcap.toString();
+                            tag = true;
                         }
                         RandomAccessFile raf = new RandomAccessFile(oneTCPPcap.toFile(), "rw");
                         raf.write(pcapHeader);
                         raf.write(data);
                         lastFilename = fileName.toString();
                         raf.close();
-                        RandomAccessFile tcpListRaf = new RandomAccessFile(tcpList.toFile(),"rw");
-                        tcpListRaf.seek(tcpListRaf.length());
-                        tcpListRaf.writeBytes(fileName.toString());
-                        tcpListRaf.writeBytes("\r\n");
-                        tcpListRaf.close();
+                        if(tag) {
+                            RandomAccessFile tcpListRaf = new RandomAccessFile(tcpList.toFile(), "rw");
+                            tcpListRaf.seek(tcpListRaf.length());
+                            tcpListRaf.writeBytes(fileName.toString());
+                            tcpListRaf.writeBytes("\r\n");
+                            tcpListRaf.close();
+                        }
                     } catch (IOException ex) {
                         ex.printStackTrace();
                     }

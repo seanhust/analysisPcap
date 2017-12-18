@@ -71,7 +71,7 @@ public class TcpAnalysisListener extends BaseAnalysisPcap implements ActionListe
     public void actionPerformed(ActionEvent e) {
         file = new File(pcapFilePath.getText());
         Path temp = Paths.get(file.getParent());
-        tcpLoad = Paths.get(temp.toFile().getParent());
+        tcpLoad = Paths.get(temp.toFile().getParent(),file.getName().substring(0,file.getName().length()-5));
         if(!Files.exists(tcpLoad)){
             try {
                 Files.createDirectory(tcpLoad);
